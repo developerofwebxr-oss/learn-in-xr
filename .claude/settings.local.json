@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sI https://developerofwebxr-oss.github.io/learn-in-xr/)",
+      "Bash(curl -s https://developerofwebxr-oss.github.io/learn-in-xr/)",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__browser_batch",
+      "Read(//Users/dev/Documents/sats-arena-4/src/**)",
+      "Read(//Users/dev/Documents/sats-arena-4/**)",
+      "Read(//Users/dev/Documents/sats-arena-4/verification/**)",
+      "Bash(find /Users/dev/Documents -maxdepth 3 -iname \"*.md\" | xargs grep -l \"html2canvas\\\\|local receiver\\\\|verification/\" 2>/dev/null)",
+      "Bash(node _pipeline.test.mjs)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node /private/tmp/claude-502/-Users-dev-Documents-learn-in-xr/d5c52043-9142-4582-8b94-b28ac03686d6/scratchpad/receiver.mjs)",
+      "Bash(curl -s -X OPTIONS http://127.0.0.1:5757/save -i)",
+      "Bash(gh run *)",
+      "mcp__claude-in-chrome__javascript_tool",
+      "mcp__claude-in-chrome__read_console_messages",
+      "Bash(pkill -f \"receiver.mjs\")",
+      "Bash(ls -la ~/Downloads/*.png 2>/dev/null | tail -10)",
+      "Bash(mv ~/Downloads/01-initial-load-constellation.png /Users/dev/Documents/learn-in-xr/verification/)",
+      "mcp__claude-in-chrome__navigate",
+      "Bash(gh workflow *)",
+      "mcp__claude-in-chrome__tabs_create_mcp",
+      "mcp__claude-in-chrome__tabs_close_mcp",
+      "Bash(curl -sI https://developerofwebxr-oss.github.io/learn-in-xr/?v=1)",
+      "Bash(curl -sI \"https://developerofwebxr-oss.github.io/learn-in-xr/\")"
+    ]
+  }
+}
