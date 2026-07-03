@@ -1,0 +1,52 @@
+name: Deploy learn-in-xr to GitHub Pages
+
+# No-build static ESM client (see README "Static client / secret backend").
+# There is no bundler here — the artifact is a straight copy of the repo
+# with dev-only files (git internals, this workflow dir, the smoke test)
+# stripped out. Guarded to this repo so the same file can't deploy from a fork.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'developerofwebxr-oss/learn-in-xr'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble static site
+        run: |
+          mkdir -p site
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='site' \
+            --exclude='_pipeline.test.mjs' \
+            ./ site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: github.repository == 'developerofwebxr-oss/learn-in-xr'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
