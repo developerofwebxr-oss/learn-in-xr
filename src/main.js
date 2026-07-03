@@ -173,4 +173,4 @@ renderer.setAnimationLoop((t) => {
 runSearch(CONFIG.DEFAULT_TOPIC);
 
 // expose for quick console poking during dev
-window.LEARN = { CONFIG, runSearch, agent, payments, assets };
+window.LEARN = { CONFIG, runSearch, agent, payments, assets, hud, drill, layout, selectPanel };
