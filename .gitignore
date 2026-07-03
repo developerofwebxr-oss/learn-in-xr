@@ -6,3 +6,4 @@ cert.pem
 key.pem
 .env
 .vscode/
+verification/
