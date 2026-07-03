@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LEARN in XR — spatial Bitcoin browser</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="A WebXR spatial search browser. An agent decomposes a topic into a 3D concept constellation; inference is metered in sats; knowledge nodes carry RGB provenance." />
+  <style>
+    :root {
+      --bg: #05060a; --ink: #eef1f8; --muted: #98a2b8;
+      --orange: #f7931a; --cyan: #4fd6ff; --panel: rgba(14,16,24,0.82);
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+    body { touch-action: manipulation; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: manipulation; }
+    #app { position: fixed; inset: 0; }
+
+    /* ---- HUD overlay (zero WebGL cost) ---- */
+    .hud { position: fixed; z-index: 10; pointer-events: none; }
+    .hud * { pointer-events: auto; }
+
+    /* top bar: brand + search + sats meter */
+    #topbar { top: 0; left: 0; right: 0; display: flex; gap: 12px; align-items: center;
+      padding: 12px 14px; background: linear-gradient(180deg, rgba(5,6,10,0.9), rgba(5,6,10,0)); }
+    #brand { font-weight: 800; letter-spacing: -0.02em; font-size: 16px; white-space: nowrap; }
+    #brand b { color: var(--orange); }
+    #search-form { flex: 1; display: flex; max-width: 560px; }
+    #search { width: 100%; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 999px; padding: 10px 16px; font-size: 15px; outline: none; }
+    #search:focus { border-color: var(--orange); }
+    .meter { display: flex; flex-direction: column; align-items: flex-end; min-width: 130px; }
+    #balance-wrap { font-weight: 700; font-size: 15px; }
+    #balance-wrap b { color: var(--orange); }
+    #last-cost { font-size: 12px; color: var(--cyan); opacity: 0.9; }
+    #last-cost.pulse { animation: pop 0.5s ease; }
+    @keyframes pop { 0% { transform: scale(1.25); color: #fff; } 100% { transform: scale(1); } }
+
+    /* second row: intent + breadcrumbs + rgb toggle */
+    #subbar { top: 58px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+      padding: 5px 12px; font-size: 12.5px; color: var(--muted); }
+    #intent { color: var(--ink); }
+    #crumbs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+    #crumbs .here { color: var(--orange); font-weight: 700; }
+    #crumbs .sep { opacity: 0.5; }
+    #back-btn { cursor: pointer; visibility: hidden; }
+    #rgb-toggle { cursor: pointer; color: #ffcf87; border-color: rgba(247,147,26,0.4); }
+
+    /* selected-panel action bar (bottom centre) */
+    #action-bar { bottom: 18px; left: 50%; transform: translateX(-50%) translateY(30px);
+      display: flex; gap: 10px; align-items: center; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; opacity: 0; transition: 0.18s; }
+    #action-bar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #sel-title { font-weight: 700; font-size: 14px; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn { cursor: pointer; border: none; border-radius: 10px; padding: 9px 14px; font-size: 13.5px; font-weight: 700; }
+    #act-btn { background: var(--orange); color: #1a1206; }
+    #mint-btn { background: #182233; color: var(--cyan); border: 1px solid rgba(79,214,255,0.35); }
+
+    /* mode switcher (top-right corner, always visible) */
+    #modes { top: 12px; right: 14px; display: flex; gap: 6px; }
+    .mode { cursor: pointer; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 10px; padding: 8px 11px; font-size: 12.5px; font-weight: 700; }
+    .mode.active { border-color: var(--orange); color: var(--orange); }
+    .mode.disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* center reticle (flat mode aiming) */
+    #reticle { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+      border: 2px solid rgba(255,255,255,0.7); border-radius: 50%; z-index: 5; pointer-events: none; }
+
+    /* mobile joystick */
+    #joystick { display: none; position: fixed; left: 26px; bottom: 26px; width: 108px; height: 108px;
+      border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid var(--line); z-index: 8; touch-action: none; }
+    #joystick-knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+      border-radius: 50%; background: rgba(247,147,26,0.7); }
+
+    /* toast */
+    #toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%) translateY(12px);
+      background: rgba(0,0,0,0.85); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px;
+      font-size: 13px; opacity: 0; transition: 0.2s; z-index: 12; pointer-events: none; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* hint */
+    #hint { bottom: 18px; left: 14px; font-size: 11.5px; color: var(--muted); max-width: 240px; }
+    body.in-xr .hud:not(#toast-wrap) { display: none; } /* HUD is DOM; hidden inside immersive session */
+  </style>
+
+  <!-- No build step: ES modules + import map, GitHub Pages friendly -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- top bar -->
+  <div id="topbar" class="hud">
+    <div id="brand">LEARN in <b>XR</b></div>
+    <form id="search-form" autocomplete="off">
+      <input id="search" placeholder="Ask about Bitcoin…  (try: Lightning Network, RGB, keys, or 'Prada shoes')" />
+    </form>
+    <div class="meter">
+      <div id="balance-wrap">⚡ <b id="balance">2,500</b> sats</div>
+      <div id="last-cost">this search: — sats</div>
+    </div>
+  </div>
+
+  <!-- sub bar -->
+  <div id="subbar" class="hud">
+    <span class="chip" id="intent">📚 learning</span>
+    <span class="chip" id="back-btn">← back</span>
+    <div id="crumbs" class="chip" style="background:transparent;border:none;padding-left:0"></div>
+    <span class="chip" id="rgb-toggle">RGB: provenance</span>
+  </div>
+
+  <!-- mode switcher -->
+  <div id="modes" class="hud">
+    <div class="mode active" id="mode-screen">Screen</div>
+    <div class="mode" id="mode-vr">VR</div>
+    <div class="mode" id="mode-ar">AR</div>
+  </div>
+
+  <!-- action bar -->
+  <div id="action-bar" class="hud">
+    <span id="sel-title">—</span>
+    <button class="btn" id="act-btn">Action</button>
+    <button class="btn" id="mint-btn">📜 Mint structure</button>
+  </div>
+
+  <!-- flat-mode aiming + mobile joystick + toast -->
+  <div id="reticle"></div>
+  <div id="joystick"><div id="joystick-knob"></div></div>
+  <div id="toast"></div>
+  <div id="hint" class="hud">Click to look · WASD to move · click a panel to drill in. On mobile: drag to look, joystick to move, tap to select.</div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
