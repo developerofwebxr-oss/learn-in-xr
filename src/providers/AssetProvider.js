@@ -62,6 +62,17 @@ export class MockAssetProvider {
       mintedAt: Date.now(),
     };
   }
+
+  /**
+   * OWNERSHIP = deferred. Discrete scarce things (mini-apps, imported 3D
+   * objects) will register as owned/tradeable UDAs for
+   * CONFIG.ECONOMICS.ownershipRegistrationFee sats — the capability and its
+   * fee are defined so the seam exists, but minting/trading is not built or
+   * reachable from the UI this phase.
+   */
+  async registerOwnership() {
+    throw new Error('ownership registration is deferred — not available in Phase 1');
+  }
 }
 
 // Phase-2 stub — same interface, real RGB.

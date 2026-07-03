@@ -22,11 +22,12 @@ export class HUD {
       actBtn:   document.getElementById('act-btn'),
       mintBtn:  document.getElementById('mint-btn'),
       toast:    document.getElementById('toast'),
+      topupBtn: document.getElementById('topup-btn'),
     };
     this.el.rgbToggle.textContent = `RGB: ${CONFIG.RGB_MODEL}`;
   }
 
-  bind({ onSearch, onBack, onRgbToggle, onAction, onMint }) {
+  bind({ onSearch, onBack, onRgbToggle, onAction, onMint, onTopUp }) {
     this.el.form.addEventListener('submit', (e) => {
       e.preventDefault();
       const q = this.el.search.value.trim();
@@ -37,13 +38,27 @@ export class HUD {
     this.el.rgbToggle.addEventListener('click', () => onRgbToggle());
     this.el.actBtn.addEventListener('click', () => onAction());
     this.el.mintBtn.addEventListener('click', () => onMint());
+    this.el.topupBtn.addEventListener('click', () => onTopUp());
   }
 
-  setBalance(sats) { this.el.balance.textContent = fmt(sats); }
-  setLastCost(sats) {
-    this.el.lastCost.textContent = `this search: ${sats} sat${sats === 1 ? '' : 's'}`;
+  setBalance(sats) {
+    this.el.balance.textContent = fmt(sats);
+    this.el.topupBtn.classList.toggle('urgent', sats < 10);
+  }
+  /** @param {{base:number, platformFee:number, total:number}} quote */
+  setLastCost({ base, platformFee, total }) {
+    this.el.lastCost.textContent =
+      `search: ${base} sat${base === 1 ? '' : 's'} + ${platformFee} sat${platformFee === 1 ? '' : 's'} platform`;
+    this.el.lastCost.title = `${total} sats total`;
     this.el.lastCost.classList.remove('pulse'); void this.el.lastCost.offsetWidth;
     this.el.lastCost.classList.add('pulse');
+  }
+  /** Balance can't cover `needed` sats — prompt a (mock) top-up. */
+  showInsufficient(needed) {
+    this.toast(`Insufficient balance — need ${fmt(needed)} sats, top up to continue`);
+    this.el.topupBtn.classList.add('urgent');
+    this.el.topupBtn.classList.remove('pulse'); void this.el.topupBtn.offsetWidth;
+    this.el.topupBtn.classList.add('pulse');
   }
   setIntent(intent) {
     this.el.intent.textContent = intent === 'shopping' ? '🛍️ shopping' : '📚 learning';

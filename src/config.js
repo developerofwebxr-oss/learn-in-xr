@@ -25,8 +25,16 @@ export const CONFIG = {
   // ever receives normalized SpatialResult[] and settled payment tokens.
   BACKEND_URL: '', // e.g. 'https://learn-in-xr.up.railway.app'
 
-  // ---- Economics (mock display) --------------------------------------
-  STARTING_BALANCE_SATS: 2500, // demo wallet
+  // ---- Economics (modeled entirely in MockPaymentProvider; Phase 3 swaps
+  // real Cashu/Routstr behind these same numbers — callers untouched) ----
+  ECONOMICS: {
+    freeTrialAllowance: 30,        // dev-sponsored sats seeded for a new visitor
+    platformFeeBps: 2500,          // 25% markup on inference, shown on the HUD
+    provenanceMintFee: 21,         // sats to mint a composition (provenance model)
+    ownershipRegistrationFee: 210, // higher than mint; defined for the ownership
+                                    // model but deferred/unused this phase
+    topUpIncrementSats: 500,       // mock instant top-up (Phase 2: real invoice)
+  },
   DEFAULT_TOPIC: 'Bitcoin',
 
   // ---- Layout ---------------------------------------------------------

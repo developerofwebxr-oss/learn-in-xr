@@ -64,19 +64,25 @@ const controls = new Controls(
 payments.on?.('inference', ({ balance }) => hud.setBalance(balance));
 payments.on?.('zap', ({ balance }) => hud.setBalance(balance));
 payments.on?.('collect', ({ balance }) => hud.setBalance(balance));
-hud.setBalance(payments.balance ?? CONFIG.STARTING_BALANCE_SATS);
+payments.on?.('mint', ({ balance }) => hud.setBalance(balance));
+payments.on?.('topup', ({ balance }) => hud.setBalance(balance));
+payments.on?.('insufficient', ({ needed }) => hud.showInsufficient(needed));
+hud.setBalance(payments.balance ?? CONFIG.ECONOMICS.freeTrialAllowance);
+
+const YOUR_NPUB = 'npub1you…mine'; // mock local identity for zap/collect/mint
 
 // ---- the core search flow -------------------------------------------
 async function runSearch(query) {
   hud.toast(`Agent thinking…`);
-  const resp = await agent.search(query);            // 1. decompose
-  await payments.payInference(resp.costSats);        // 2. meter sats
-  hud.setLastCost(resp.costSats);
+  const resp = await agent.search(query);             // 1. decompose
+  const paid = await payments.payInference(resp.costSats); // 2. meter sats + platform fee
+  if (!paid.ok) return;                                // insufficient balance — toast shown by HUD
+  hud.setLastCost(paid);
   hud.setIntent(resp.intent);
   const decorated = assets.decorateAll(resp.results); // 3. RGB provenance/ownership
   drill.setRoot(query, decorated);                    // 4. lay out arc
   selectPanel(null);
-  hud.toast(`${decorated.length} panels · ${resp.costSats} sats`);
+  hud.toast(`${decorated.length} panels · ${paid.total} sats (${paid.base} + ${paid.platformFee} platform)`);
 }
 
 function selectPanel(group) {
@@ -112,10 +118,12 @@ hud.bind({
     if (!node) return;
     if (node.rgb?.model === 'ownership') {
       const r = await payments.collect(node);
-      node.rgb.ownerNpub = 'npub1you…mine'; selected.userData.refresh();
+      if (!r.ok) return;
+      node.rgb.ownerNpub = YOUR_NPUB; selected.userData.refresh();
       hud.toast(`Collected · −${r.collected} sats`);
     } else if (node.rgb) {
       const r = await payments.zap(node.rgb.authorNpub, 21);
+      if (!r.ok) return;
       node.rgb.zaps = (node.rgb.zaps || 0) + 21; selected.userData.refresh();
       hud.toast(`⚡ Zapped ${node.rgb.authorName} · 21 sats`);
     } else if (node.kind === 'product') {
@@ -125,12 +133,18 @@ hud.bind({
   onMint: async () => {
     const top = drill.stack[drill.stack.length - 1];
     if (!top) return;
+    const paid = await payments.payProvenanceMint(); // flat 21-sat mint fee
+    if (!paid.ok) return;
     hud.toast('Minting structure as RGB UDA…');
     const res = await assets.mintStructure(
       { title: top.title, childIds: top.results.map((r) => r.id) },
-      'npub1you…mine'
+      YOUR_NPUB
     );
-    hud.toast(`Minted ${res.schema}: ${res.contractId}`);
+    hud.toast(`Minted ${res.schema} · minted by ${YOUR_NPUB} · −${paid.paid} sats`);
+  },
+  onTopUp: async () => {
+    const r = await payments.topUp();
+    hud.toast(`+${r.topped} sats added (mock top-up)`);
   },
 });
 
