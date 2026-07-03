@@ -173,4 +173,8 @@ renderer.setAnimationLoop((t) => {
 runSearch(CONFIG.DEFAULT_TOPIC);
 
 // expose for quick console poking during dev
-window.LEARN = { CONFIG, runSearch, agent, payments, assets, hud, drill, layout, selectPanel };
+window.LEARN = {
+  CONFIG, runSearch, agent, payments, assets, hud, drill, layout, selectPanel,
+  renderer, scene, camera, // lets a background/hidden tab force a synchronous
+                            // render (rAF is throttled when the tab isn't visible)
+};
