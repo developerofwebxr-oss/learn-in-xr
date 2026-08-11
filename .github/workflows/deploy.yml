@@ -2,8 +2,9 @@ name: Deploy learn-in-xr to GitHub Pages
 
 # No-build static ESM client (see README "Static client / secret backend").
 # There is no bundler here — the artifact is a straight copy of the repo
-# with dev-only files (git internals, this workflow dir, the smoke test)
-# stripped out. Guarded to this repo so the same file can't deploy from a fork.
+# with dev-only files (git internals, this workflow dir, the smoke test,
+# internal docs, local QA screenshots) stripped out. Guarded to this repo
+# so the same file can't deploy from a fork.
 
 on:
   push:
@@ -32,8 +33,12 @@ jobs:
           rsync -a \
             --exclude='.git' \
             --exclude='.github' \
+            --exclude='.claude' \
             --exclude='site' \
+            --exclude='verification' \
             --exclude='_pipeline.test.mjs' \
+            --exclude='CLAUDE.md' \
+            --exclude='HANDOFF.md' \
             ./ site/
 
       - uses: actions/upload-pages-artifact@v3
