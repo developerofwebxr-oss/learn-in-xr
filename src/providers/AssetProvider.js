@@ -12,7 +12,7 @@
 //   Railway RGB-Lightning node. Renderer is untouched.
 
 import { CONFIG } from '../config.js';
-import { AUTHORED_NODES } from '../content/bitcoinCorpus.js';
+import { AUTHORED_NODES } from '../content/techCorpus.js';
 
 let mintCounter = 100;
 

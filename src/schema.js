@@ -35,9 +35,11 @@
  * @property {number} [priceSats]   shopping intent only
  * @property {string} [link]        external reference
  * @property {number} relevance     0..1  -> nearer + larger when higher
- * @property {string} category      sector key, e.g. "core" | "layer2" | ...
+ * @property {string} category      sector key, e.g. "rendering" | "immersion" | ...
  * @property {string[]} [children]  seed ids/queries for recursive drill-down
- * @property {RgbAsset} [rgb]       set when this node is an RGB asset
+ * @property {RgbAsset} [rgb]       set when this node is an RGB asset (economics demo only)
+ * @property {{label:string,url:string}[]} [links]  1-2 real official sources
+ * @property {'STANDARD'|'SHIPPING'|'MATURING'|'EXPERIMENTAL'} [maturity]  honest support level
  */
 
 /**
@@ -46,17 +48,22 @@
  * @property {string} query
  * @property {SpatialResult[]} results
  * @property {number} costSats     inference cost metered for THIS search
+ * @property {string} [note]       shown on the HUD when the query didn't map
+ *   to anything and the mock agent fell back to the nearest cluster
  */
 
 // Sector -> angular offset (degrees, relative to arc centre) and a theme
-// colour. Categories keep related concepts clustered in space.
+// colour. Categories keep related concepts clustered in space. These are the
+// 8 clusters of "the tech behind the spatial web" — see content/techCorpus.js.
 export const SECTORS = {
-  core:    { label: 'Core',        hue: 0.10, order: 0 }, // orange
-  layer2:  { label: 'Layer 2',     hue: 0.55, order: 1 }, // cyan
-  crypto:  { label: 'Cryptography', hue: 0.75, order: 2 }, // violet
-  economy: { label: 'Money',       hue: 0.33, order: 3 }, // green
-  social:  { label: 'Social',      hue: 0.90, order: 4 }, // pink
-  contracts:{ label: 'Contracts',  hue: 0.13, order: 5 }, // amber
+  rendering: { label: 'Rendering',          hue: 0.06, order: 0 }, // orange
+  immersion: { label: 'Immersion',          hue: 0.55, order: 1 }, // cyan
+  realtime:  { label: 'Real-time',          hue: 0.80, order: 2 }, // violet
+  platform:  { label: 'Platform Primitives',hue: 0.62, order: 3 }, // blue
+  physics:   { label: 'Physics & Simulation', hue: 0.35, order: 4 }, // green
+  identity:  { label: 'Identity & Social',  hue: 0.90, order: 5 }, // pink
+  value:     { label: 'Value & Open Money', hue: 0.13, order: 6 }, // amber
+  why:       { label: 'The Why',            hue: 0.0,  order: 7 }, // red
 };
 
 // Nothing to instantiate — this module is types + the sector table.

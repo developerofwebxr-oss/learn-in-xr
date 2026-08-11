@@ -4,7 +4,7 @@
 // breadcrumb. Going back re-lays the previous level. Browsing becomes a walk
 // through the shape of the topic rather than a scroll of links.
 
-import { expandChildren } from '../content/bitcoinCorpus.js';
+import { expandChildren } from '../content/techCorpus.js';
 
 export class DrillStack {
   /**

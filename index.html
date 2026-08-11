@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>LEARN in XR — spatial Bitcoin browser</title>
+  <title>Learn XR in XR — an XR browser</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="description" content="A WebXR spatial search browser. An agent decomposes a topic into a 3D concept constellation; inference is metered in sats; knowledge nodes carry RGB provenance." />
+  <meta name="description" content="An XR browser — search the tech behind the spatial web, and the results surround you. A curated 3D constellation of the standards, engines, and protocols building the spatial web." />
   <style>
     :root {
       --bg: #05060a; --ink: #eef1f8; --muted: #98a2b8;
@@ -89,6 +89,16 @@
     /* hint */
     #hint { bottom: 18px; left: 14px; font-size: 11.5px; color: var(--muted); max-width: 240px; }
     body.in-xr .hud:not(#toast-wrap) { display: none; } /* HUD is DOM; hidden inside immersive session */
+
+    /* footer note (general demo) */
+    #footer-note { bottom: 18px; right: 14px; font-size: 11px; color: var(--muted); opacity: 0.75; max-width: 320px; text-align: right; }
+
+    /* sats/pay-per-inference demo layer — code stays wired, hidden by default.
+       Enable with CONFIG.SHOW_ECONOMICS_UI or ?economics=on (see README). */
+    .econ-hide { display: none; }
+    body.economics-on .meter.econ-hide { display: flex; }
+    body.economics-on #rgb-toggle.econ-hide { display: inline-block; }
+    body.economics-on #action-bar.econ-hide { display: flex; }
   </style>
 
   <!-- No build step: ES modules + import map, GitHub Pages friendly -->
@@ -106,11 +116,11 @@
 
   <!-- top bar -->
   <div id="topbar" class="hud">
-    <div id="brand">LEARN in <b>XR</b></div>
+    <div id="brand">Learn XR in <b>XR</b></div>
     <form id="search-form" autocomplete="off">
-      <input id="search" placeholder="Ask about Bitcoin…  (try: Lightning Network, RGB, keys, or 'Prada shoes')" />
+      <input id="search" placeholder="Search the tech behind the spatial web…  (try: multiplayer, graphics, own my identity)" />
     </form>
-    <div class="meter">
+    <div class="meter econ-hide">
       <div id="balance-wrap">⚡ <b id="balance">30</b> sats</div>
       <div id="last-cost">search: — sats</div>
       <button id="topup-btn" type="button">+ Top up</button>
@@ -122,7 +132,7 @@
     <span class="chip" id="intent">📚 learning</span>
     <span class="chip" id="back-btn">← back</span>
     <div id="crumbs" class="chip" style="background:transparent;border:none;padding-left:0"></div>
-    <span class="chip" id="rgb-toggle">RGB: provenance</span>
+    <span class="chip econ-hide" id="rgb-toggle">RGB: provenance</span>
   </div>
 
   <!-- mode switcher -->
@@ -133,7 +143,7 @@
   </div>
 
   <!-- action bar -->
-  <div id="action-bar" class="hud">
+  <div id="action-bar" class="hud econ-hide">
     <span id="sel-title">—</span>
     <button class="btn" id="act-btn">Action</button>
     <button class="btn" id="mint-btn">📜 Mint structure</button>
@@ -144,6 +154,7 @@
   <div id="joystick"><div id="joystick-knob"></div></div>
   <div id="toast"></div>
   <div id="hint" class="hud">Click to look · WASD to move · click a panel to drill in. On mobile: drag to look, joystick to move, tap to select.</div>
+  <div id="footer-note" class="hud">an XR browser — search the tech behind the spatial web, and the results surround you · demo corpus, as of Aug 2026</div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

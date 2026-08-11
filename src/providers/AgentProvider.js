@@ -10,7 +10,7 @@
 // The renderer calls search() and does not care which one is wired.
 
 import { CONFIG } from '../config.js';
-import { CORPUS, decompose, routeIntent } from '../content/bitcoinCorpus.js';
+import { CORPUS, decompose, routeIntent } from '../content/techCorpus.js';
 
 /** @typedef {import('../schema.js').SearchResponse} SearchResponse */
 
@@ -23,15 +23,15 @@ export class MockAgentProvider {
    * @returns {Promise<SearchResponse>}
    */
   async search(query) {
-    const intent = routeIntent(query);
+    const intent = routeIntent();
     // Simulate inference latency so the sats meter "ticks" believably.
     await sleep(280 + Math.random() * 260);
 
-    const results = decompose(query, intent);
+    const { results, note } = decompose(query);
     // Mock metering: cost scales with how many panels the agent "generated".
     const costSats = Math.max(1, Math.round(results.length * 0.6));
 
-    return { intent, query, results, costSats };
+    return { intent, query, results, costSats, note };
   }
 }
 

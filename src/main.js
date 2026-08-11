@@ -60,7 +60,12 @@ const controls = new Controls(
   }
 );
 
-// ---- payment meter -> HUD -------------------------------------------
+// ---- sats/pay-per-inference demo layer --------------------------------
+// Fully wired, default OFF (see config.js SHOW_ECONOMICS_UI). The DOM chips
+// are CSS-hidden by default (index.html .econ-hide); this class is what
+// reveals them again when the flag is on.
+document.body.classList.toggle('economics-on', CONFIG.SHOW_ECONOMICS_UI);
+
 payments.on?.('inference', ({ balance }) => hud.setBalance(balance));
 payments.on?.('zap', ({ balance }) => hud.setBalance(balance));
 payments.on?.('collect', ({ balance }) => hud.setBalance(balance));
@@ -74,15 +79,23 @@ const YOUR_NPUB = 'npub1you…mine'; // mock local identity for zap/collect/mint
 // ---- the core search flow -------------------------------------------
 async function runSearch(query) {
   hud.toast(`Agent thinking…`);
-  const resp = await agent.search(query);             // 1. decompose
-  const paid = await payments.payInference(resp.costSats); // 2. meter sats + platform fee
-  if (!paid.ok) return;                                // insufficient balance — toast shown by HUD
-  hud.setLastCost(paid);
+  const resp = await agent.search(query);              // 1. decompose
+
+  let decorated = resp.results;
+  let costLine = '';
+  if (CONFIG.SHOW_ECONOMICS_UI) {
+    const paid = await payments.payInference(resp.costSats); // meter sats + platform fee
+    if (!paid.ok) return;                               // insufficient balance — toast shown by HUD
+    hud.setLastCost(paid);
+    decorated = assets.decorateAll(resp.results);        // RGB provenance/ownership
+    costLine = ` · ${paid.total} sats (${paid.base} + ${paid.platformFee} platform)`;
+  }
   hud.setIntent(resp.intent);
-  const decorated = assets.decorateAll(resp.results); // 3. RGB provenance/ownership
-  drill.setRoot(query, decorated);                    // 4. lay out arc
+  drill.setRoot(query || 'Spatial Web', decorated);       // 4. lay out arc
   selectPanel(null);
-  hud.toast(`${decorated.length} panels · ${paid.total} sats (${paid.base} + ${paid.platformFee} platform)`);
+
+  // unmapped query -> nearest-cluster fallback note takes priority over the panel-count toast
+  hud.toast(resp.note || `${decorated.length} panels${costLine}`);
 }
 
 function selectPanel(group) {

@@ -111,9 +111,30 @@ function drawFace(canvas, node, accent) {
       ctx.fillText(`by ${r.authorName} · ⚡${fmtSats(r.zaps)}`, pad + 150, footY - 40);
       ctx.fillText(`${r.authorNpub}`, pad, footY + 8);
     }
+  } else if (node.maturity || node.links?.length) {
+    if (node.maturity) {
+      ctx.fillStyle = maturityColor(node.maturity);
+      ctx.font = 'bold 28px system-ui, sans-serif';
+      ctx.fillText(`● ${node.maturity}`, pad, footY - 38);
+    }
+    if (node.links?.length) {
+      ctx.fillStyle = 'rgba(180,190,210,0.85)';
+      ctx.font = '26px system-ui, sans-serif';
+      ctx.fillText(`🔗 ${node.links.map((l) => l.label).join(' · ')}`, pad, footY + 8);
+    }
   } else if (node.children && node.children.length) {
     ctx.fillStyle = 'rgba(150,160,180,0.8)';
     ctx.fillText(`↳ ${node.children.length} more inside`, pad, footY + 8);
+  }
+}
+
+function maturityColor(m) {
+  switch (m) {
+    case 'STANDARD': return 'rgba(120,190,255,0.95)';
+    case 'SHIPPING': return 'rgba(120,220,150,0.95)';
+    case 'MATURING': return 'rgba(255,200,90,0.95)';
+    case 'EXPERIMENTAL': return 'rgba(255,130,120,0.95)';
+    default: return 'rgba(200,206,220,0.9)';
   }
 }
 

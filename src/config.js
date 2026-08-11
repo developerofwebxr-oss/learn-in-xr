@@ -35,7 +35,16 @@ export const CONFIG = {
                                     // model but deferred/unused this phase
     topUpIncrementSats: 500,       // mock instant top-up (Phase 2: real invoice)
   },
-  DEFAULT_TOPIC: 'Bitcoin',
+  DEFAULT_TOPIC: '', // '' = the 8-cluster top-level constellation (browsable before any query)
+
+  // ---- Sats/pay-per-inference demo layer -------------------------------
+  // The general demo is a plain XR browser: search, constellation, panels,
+  // drill, mode switcher — no sats meter, no RGB toggle, no mint/zap/collect
+  // action bar. All of that code is untouched and fully wired; this single
+  // flag just keeps it out of the default experience. Flip it (or load with
+  // ?economics=on) to see the original pay-per-inference + RGB provenance
+  // demo layered on top of the SAME corpus.
+  SHOW_ECONOMICS_UI: false,
 
   // ---- Layout ---------------------------------------------------------
   ARC_RADIUS: 3.2,        // metres from user to the primary panel arc
@@ -48,3 +57,5 @@ const q = new URLSearchParams(location.search);
 if (q.get('rgb') === 'ownership' || q.get('rgb') === 'provenance') {
   CONFIG.RGB_MODEL = q.get('rgb');
 }
+// ?economics=on re-enables the sats meter / RGB toggle / mint-zap-collect bar.
+if (q.get('economics') === 'on') CONFIG.SHOW_ECONOMICS_UI = true;
