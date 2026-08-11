@@ -7,3 +7,4 @@ key.pem
 .env
 .vscode/
 verification/
+.claude/settings.local.json
