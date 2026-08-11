@@ -94,8 +94,11 @@
     #footer-note { bottom: 18px; right: 14px; font-size: 11px; color: var(--muted); opacity: 0.75; max-width: 320px; text-align: right; }
 
     /* sats/pay-per-inference demo layer — code stays wired, hidden by default.
-       Enable with CONFIG.SHOW_ECONOMICS_UI or ?economics=on (see README). */
-    .econ-hide { display: none; }
+       Enable with CONFIG.SHOW_ECONOMICS_UI or ?economics=on (see README).
+       Selectors below match each hidden element's own id/class specificity
+       (#action-bar has its own `display` rule — a bare `.econ-hide` class
+       rule can't beat an id rule, so the id has to be repeated here). */
+    #action-bar.econ-hide, .meter.econ-hide, #rgb-toggle.econ-hide { display: none; }
     body.economics-on .meter.econ-hide { display: flex; }
     body.economics-on #rgb-toggle.econ-hide { display: inline-block; }
     body.economics-on #action-bar.econ-hide { display: flex; }
