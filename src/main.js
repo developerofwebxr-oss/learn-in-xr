@@ -14,6 +14,7 @@ import { Controls, IS_MOBILE } from './controls.js';
 import { buildEnvironment } from './environment.js';
 import { SpatialLayout } from './renderer/spatialLayout.js';
 import { DrillStack } from './renderer/drilldown.js';
+import { InWorldControls } from './renderer/inWorldControls.js';
 import { makeAgentProvider } from './providers/AgentProvider.js';
 import { makePaymentProvider } from './providers/PaymentProvider.js';
 import { makeAssetProvider } from './providers/AssetProvider.js';
@@ -59,6 +60,10 @@ const controls = new Controls(
     onSelect: (group) => selectPanel(group),
   }
 );
+
+// ---- in-world Back/Search controls (immersive VR/AR only — the DOM HUD
+// doesn't exist in-session). Constructed once; spawned/disposed per session.
+const inWorld = new InWorldControls({ scene, camera, renderer, goBack, runSearch });
 
 // ---- mobile gyro free-look toggle (opt-in; drag-look is unaffected) --
 if (IS_MOBILE) {
@@ -116,6 +121,9 @@ async function runSearch(query) {
 
   // unmapped query -> nearest-cluster fallback note takes priority over the panel-count toast
   hud.toast(resp.note || `${decorated.length} panels${costLine}`);
+  // the DOM toast above is invisible inside an immersive session — mirror the
+  // same fallback note in-scene, near the arc, so it isn't silently lost
+  if (resp.note && renderer.xr.isPresenting) inWorld.showFallbackNote(resp.note);
 }
 
 function selectPanel(group) {
@@ -134,10 +142,20 @@ function selectPanel(group) {
   hud.showAction(node);
 }
 
+// Shared by the DOM back button and the in-world Back button — one source
+// of truth. DrillStack.back() is a no-op once already at its own root; if
+// that root came from a SEARCH (not the default 8-cluster load), restore
+// the default view instead of just sitting there with no way back to it.
+function goBack() {
+  if (drill.stack.length > 1) drill.back();
+  else if (drill.stack[0]?.title !== 'Spatial Web') runSearch('');
+  hud.showAction(null);
+}
+
 // ---- HUD actions -----------------------------------------------------
 hud.bind({
   onSearch: (q) => runSearch(q),
-  onBack: () => { drill.back(); hud.showAction(null); },
+  onBack: () => goBack(),
   onRgbToggle: () => {
     CONFIG.RGB_MODEL = CONFIG.RGB_MODEL === 'provenance' ? 'ownership' : 'provenance';
     hud.setRgbLabel(CONFIG.RGB_MODEL);
@@ -183,8 +201,19 @@ hud.bind({
 
 // ---- mode switching --------------------------------------------------
 new ModeSwitcher(renderer, {
-  onEnter: () => { document.getElementById('reticle').style.display = 'none'; },
-  onExit: () => { document.getElementById('reticle').style.display = ''; },
+  onEnter: () => {
+    document.getElementById('reticle').style.display = 'none';
+    inWorld.spawn(); // flat/mobile keep the DOM HUD; VR/AR get the in-world cluster instead
+  },
+  onExit: () => {
+    document.getElementById('reticle').style.display = '';
+    inWorld.dispose(); // sessionend: dispose the cluster, search panel, and keyboard
+    rig.position.set(0, 0, 0);
+    rig.rotation.set(0, 0, 0);
+    camera.position.set(0, CONFIG.PANEL_EYE_HEIGHT, 0);
+    camera.rotation.set(0, 0, 0);
+    controls.yaw = 0; controls.pitch = 0;
+  },
 });
 
 // ---- resize + loop ---------------------------------------------------
@@ -199,6 +228,7 @@ renderer.setAnimationLoop((t) => {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   controls.update(dt);
   layout.update(t);
+  if (renderer.xr.isPresenting) inWorld.update(dt, controls.controllers);
   renderer.render(scene, camera);
 });
 
@@ -211,4 +241,5 @@ window.LEARN = {
   renderer, scene, camera, // lets a background/hidden tab force a synchronous
                             // render (rAF is throttled when the tab isn't visible)
   controls, IS_MOBILE,     // scripted verification of gyro/drag-look state
+  inWorld, goBack, world, rig, // scripted verification of in-world XR controls
 };

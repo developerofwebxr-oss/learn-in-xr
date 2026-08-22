@@ -227,7 +227,10 @@ export function routeIntent() {
 }
 
 // ~10 example intents. Real version = Routstr semantic decomposition.
-const INTENT_MAP = [
+// Exported so both decompose() and the in-world search chips (immersive
+// sessions only — inWorldControls.js) read the SAME 12 mappings, not two
+// copies that could drift.
+export const INTENT_MAP = [
   { keywords: ['multiplayer', 'multi-player', 'multi player'], nodeIds: ['websockets', 'webtransport', 'webrtc', 'livekit'] },
   { keywords: ['graphics', 'render', 'rendering'], nodeIds: ['webgpu', 'webgl', 'threejs', 'shaders'] },
   { keywords: ['own my identity', 'identity', 'social network'], nodeIds: ['nostr', 'atproto', 'activitypub'] },
