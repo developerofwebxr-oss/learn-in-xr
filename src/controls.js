@@ -38,6 +38,7 @@ export class Controls {
     this._initKeys();
     if (isCoarse) this._initJoystick();
     this._initXR();
+    this._initGyro();
   }
 
   // ---- desktop pointer-lock + mobile drag look ---------------------
@@ -96,6 +97,68 @@ export class Controls {
     base.addEventListener('touchstart', (e) => { start(); moveJ(e.touches[0]); }, { passive: true });
     base.addEventListener('touchmove', (e) => moveJ(e.touches[0]), { passive: true });
     base.addEventListener('touchend', end, { passive: true });
+  }
+
+  // ---- gyro free-look (mobile, OPT-IN only) ------------------------
+  //
+  // Off by default: no listener is attached until enableGyro() is called
+  // from a real tap (required on iOS — DeviceOrientationEvent.requestPermission()
+  // only resolves 'granted' when invoked synchronously inside a user gesture,
+  // so toggleGyro()/enableGyro() must be awaited directly from the tap handler,
+  // not after any other await first).
+  //
+  // Applies device-orientation readings as frame-to-frame DELTAS (not an
+  // absolute recompute from a fixed baseline) so it composes cleanly with
+  // manual drag-look, which mutates the same this.yaw/this.pitch — and so
+  // turning gyro off just stops updating them, with no snap back to zero.
+  _initGyro() {
+    this.gyroEnabled = false;
+    this.gyroSupported = typeof DeviceOrientationEvent !== 'undefined';
+    this._gyroLast = null; // { alpha, beta } from the previous reading
+    this._onDeviceOrientation = (e) => {
+      if (!this.gyroEnabled || e.alpha == null || e.beta == null) return;
+      if (this._gyroLast) {
+        let dAlpha = e.alpha - this._gyroLast.alpha;
+        dAlpha = ((dAlpha + 180) % 360 + 360) % 360 - 180; // wrap compass heading to [-180,180]
+        const dBeta = e.beta - this._gyroLast.beta;
+        this.yaw -= THREE.MathUtils.degToRad(dAlpha);
+        this.pitch -= THREE.MathUtils.degToRad(dBeta);
+        this._clampPitch();
+      }
+      this._gyroLast = { alpha: e.alpha, beta: e.beta };
+    };
+  }
+
+  /** Must be called directly from a user-gesture handler (see note above). */
+  async enableGyro() {
+    if (this.gyroEnabled) return { ok: true };
+    if (!this.gyroSupported) return { ok: false, reason: 'unsupported' };
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== 'granted') return { ok: false, reason: 'denied' };
+      } catch {
+        return { ok: false, reason: 'denied' };
+      }
+    }
+    this._gyroLast = null; // next reading only seeds the baseline, no jump
+    window.addEventListener('deviceorientation', this._onDeviceOrientation);
+    this.gyroEnabled = true;
+    return { ok: true };
+  }
+
+  /** Leaves this.yaw/this.pitch exactly where they are — no snap. */
+  disableGyro() {
+    window.removeEventListener('deviceorientation', this._onDeviceOrientation);
+    this.gyroEnabled = false;
+    this._gyroLast = null;
+  }
+
+  /** @returns {Promise<{enabled:boolean, ok:boolean, reason?:string}>} */
+  async toggleGyro() {
+    if (this.gyroEnabled) { this.disableGyro(); return { enabled: false, ok: true }; }
+    const r = await this.enableGyro();
+    return { enabled: this.gyroEnabled, ok: r.ok, reason: r.reason };
   }
 
   // ---- XR controllers ---------------------------------------------

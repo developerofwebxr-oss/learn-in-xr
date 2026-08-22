@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { HUD } from './hud.js';
 import { ModeSwitcher } from './modeswitcher.js';
-import { Controls } from './controls.js';
+import { Controls, IS_MOBILE } from './controls.js';
 import { buildEnvironment } from './environment.js';
 import { SpatialLayout } from './renderer/spatialLayout.js';
 import { DrillStack } from './renderer/drilldown.js';
@@ -59,6 +59,26 @@ const controls = new Controls(
     onSelect: (group) => selectPanel(group),
   }
 );
+
+// ---- mobile gyro free-look toggle (opt-in; drag-look is unaffected) --
+if (IS_MOBILE) {
+  const gyroBtn = document.getElementById('gyro-toggle');
+  gyroBtn.style.display = 'flex';
+  gyroBtn.addEventListener('click', async () => {
+    if (gyroBtn.classList.contains('disabled')) return;
+    // Call directly inside this handler (no prior await) — iOS only honors
+    // DeviceOrientationEvent.requestPermission() as a genuine user gesture
+    // when it's invoked synchronously from the tap that triggered it.
+    const r = await controls.toggleGyro();
+    gyroBtn.classList.toggle('active', r.enabled);
+    gyroBtn.title = `Gyroscope look (${r.enabled ? 'on' : 'off'})`;
+    if (!r.enabled && r.reason === 'denied') {
+      gyroBtn.classList.add('disabled');
+      gyroBtn.title = 'Gyroscope look (permission denied)';
+      hud.toast('Gyroscope permission denied — drag-look still works');
+    }
+  });
+}
 
 // ---- sats/pay-per-inference demo layer --------------------------------
 // Fully wired, default OFF (see config.js SHOW_ECONOMICS_UI). The DOM chips
