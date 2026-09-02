@@ -52,7 +52,7 @@ Aug 2026, not a guarantee. See `src/content/techCorpus.js`.
 | **Platform Primitives** | WebAssembly, Web Workers/OffscreenCanvas, WebGPU compute, PWA/service workers, Web Audio, Gamepad API, WebCodecs, ES modules + import maps |
 | **Physics & Simulation** | Rapier (WASM), physics-in-a-worker pattern, cannon-es/Ammo.js |
 | **Identity & Social** | Nostr, AT Protocol/Bluesky, ActivityPub/fediverse |
-| **Value & Open Money** | Bitcoin, Lightning, Cashu/ecash, RGB, LNURL/NWC |
+| **Value & Open Money** | Bitcoin, Lightning, RGB, LNURL/NWC |
 | **The Why** | The dimensional web, "one link, any reality", open standards vs walled gardens |
 
 Try typing: `multiplayer`, `graphics`, `own my identity`, `physics`,
