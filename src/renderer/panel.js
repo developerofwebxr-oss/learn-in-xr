@@ -25,7 +25,7 @@ export function makePanel(node) {
   // --- canvas face ---------------------------------------------------
   const canvas = document.createElement('canvas');
   canvas.width = TEX_W; canvas.height = TEX_H;
-  drawFace(canvas, node, accent);
+  drawFace(canvas, node, accent, 0);
   const tex = new THREE.CanvasTexture(canvas);
   tex.anisotropy = 4;
   if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
@@ -44,18 +44,39 @@ export function makePanel(node) {
   group.userData.node = node;
   group.userData.accent = accent;
   group.userData.baseScale = 1;
+  group.userData.tier = 0; // 0=meaning(t1) 1=how it works(t2) 2=gotchas(t3)
   group.userData.setHover = (on) => {
     frameMat.opacity = on ? 0.9 : 0.28;
     const s = on ? 1.06 : 1.0;
     group.scale.setScalar(group.userData.baseScale * s);
   };
   // Redraw the face (used after a zap/collect updates the node).
-  group.userData.refresh = () => { drawFace(canvas, node, accent); tex.needsUpdate = true; };
+  group.userData.refresh = () => { drawFace(canvas, node, accent, group.userData.tier); tex.needsUpdate = true; };
+  // Selecting an already-selected panel calls this to cycle t1 -> t2 -> t3 -> t1.
+  // Same handler regardless of input (flat click, mobile tap, in-world laser
+  // select) — all three funnel through main.js's selectPanel(), which is the
+  // single call site for this. A no-op for nodes with no `tiers` (cluster roots).
+  group.userData.cycleTier = () => {
+    if (!node.tiers) return false;
+    group.userData.tier = (group.userData.tier + 1) % 3;
+    drawFace(canvas, node, accent, group.userData.tier);
+    tex.needsUpdate = true;
+    return true;
+  };
 
   return group;
 }
 
-function drawFace(canvas, node, accent) {
+const TIER_LABELS = ['Meaning', 'How it works', 'Gotchas'];
+
+/** Body text for the given tier — t1 falls back to `body` for nodes with no `tiers`. */
+function tierBody(node, tier) {
+  if (tier === 1 && node.tiers) return node.tiers.t2;
+  if (tier === 2 && node.tiers) return node.tiers.t3.map((b) => `• ${b}`).join('   ');
+  return node.body || '';
+}
+
+function drawFace(canvas, node, accent, tier = 0) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -82,10 +103,25 @@ function drawFace(canvas, node, accent) {
   ctx.font = 'bold 62px system-ui, sans-serif';
   wrapText(ctx, node.title, pad + 132, 66, W - pad * 2 - 132, 64, 2);
 
-  // body
+  // body — swaps per tier; title/footer/links/maturity stay put (task: panel
+  // size and position unchanged, tier text re-renders in place)
   ctx.fillStyle = 'rgba(210,216,230,0.9)';
   ctx.font = '38px system-ui, sans-serif';
-  wrapText(ctx, node.body || '', pad, 210, W - pad * 2, 48, 5);
+  wrapText(ctx, tierBody(node, tier), pad, 210, W - pad * 2, 48, 5);
+
+  // ---- tier indicator: three dots (active lit) + label -------------
+  if (node.tiers) {
+    const dotY = 466;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(pad + 10 + i * 24, dotY, 7, 0, Math.PI * 2);
+      ctx.fillStyle = i === tier ? accent.getStyle() : 'rgba(255,255,255,0.22)';
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(210,216,230,0.85)';
+    ctx.font = '600 26px system-ui, sans-serif';
+    ctx.fillText(TIER_LABELS[tier], pad + 88, dotY - 13);
+  }
 
   // ---- footer: price / RGB provenance / drill hint ----------------
   const footY = H - 96;

@@ -126,19 +126,32 @@ async function runSearch(query) {
   if (resp.note && renderer.xr.isPresenting) inWorld.showFallbackNote(resp.note);
 }
 
+// One handler for flat click, mobile tap, AND in-world laser select — all
+// three funnel here through controls.js's unified _pick()/onSelect callback
+// (in-world button-cluster clicks are a separate path in inWorldControls.js,
+// but concept-panel picks in every mode, including VR/AR, land here).
 function selectPanel(group) {
-  if (selected) selected.userData.setHover(false);
-  selected = group;
-  if (group) group.userData.setHover(true);
   const node = group?.userData.node || null;
 
-  // Single tap on a concept with children = drill in.
+  // Concept with children = drill in (clusters have no tiers to cycle).
   if (node && node.kind === 'concept' && node.children?.length) {
-    drill.enter(node);
+    if (selected) selected.userData.setHover(false);
     selected = null;
+    drill.enter(node);
     hud.showAction(null);
     return;
   }
+
+  // Selecting the already-selected leaf panel advances its tier in place
+  // (t1 meaning -> t2 how it works -> t3 gotchas -> back to t1).
+  if (group && group === selected && group.userData.cycleTier()) {
+    hud.showAction(node);
+    return;
+  }
+
+  if (selected) selected.userData.setHover(false);
+  selected = group;
+  if (group) group.userData.setHover(true);
   hud.showAction(node);
 }
 

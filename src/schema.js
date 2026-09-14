@@ -40,6 +40,10 @@
  * @property {RgbAsset} [rgb]       set when this node is an RGB asset (economics demo only)
  * @property {{label:string,url:string}[]} [links]  1-2 real official sources
  * @property {'STANDARD'|'SHIPPING'|'MATURING'|'EXPERIMENTAL'} [maturity]  honest support level
+ * @property {{t2:string, t3:string[]}} [tiers]  depth layers beyond `body` (t1):
+ *   t2 = "how it works" (mechanism-level), t3 = "gotchas & traps" (real,
+ *   sourced bullets — "no known traps documented yet" where none are known).
+ *   Selecting an already-selected panel cycles body(t1) -> t2 -> t3 -> t1.
  */
 
 /**

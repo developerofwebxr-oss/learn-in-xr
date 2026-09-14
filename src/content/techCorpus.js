@@ -8,6 +8,13 @@
 // (MDN, W3C/immersive-web, project sites) — never invented. Maturity tags are
 // an honest snapshot as of Aug 2026, not a guarantee.
 //
+// Every leaf node also carries `tiers` — a t2 ("how it works") and t3
+// ("gotchas & traps") beyond the t1 `body` ("meaning"). t3 is sourced from
+// real, hard-won lessons (the webxr-threejs / threejs-visual-polish skills,
+// and the CLAUDE.md of sibling repos — wordmesh, sats-arena-4, xr-stage) —
+// never invented filler. Where nothing real was sourced for a node, t3 says
+// so plainly rather than making something up.
+//
 // A couple of nodes are ALSO listed in AUTHORED_NODES to demonstrate the RGB
 // layer (community-authored knowledge carrying verifiable provenance) — that
 // layer is off by default; see config.js SHOW_ECONOMICS_UI.
@@ -15,6 +22,13 @@
 /** @typedef {import('../schema.js').SpatialResult} SpatialResult */
 
 export const CLUSTER_IDS = ['rendering', 'immersion', 'realtime', 'platform', 'physics', 'identity', 'value', 'why'];
+
+// Every tier (t1 body, t2, and the joined t3 bullets) must fit the panel's
+// existing text area without relying on wrapText's ellipsis to hide excess —
+// see panel.js. Enforced by _pipeline.test.mjs.
+export const TIER_MAX_CHARS = 300;
+
+const NO_KNOWN_TRAPS = ['no known traps documented yet'];
 
 /** Every node keyed by id so drill-down can resolve children by id. */
 /** @type {Record<string, SpatialResult>} */
@@ -28,25 +42,48 @@ export const CORPUS = {
   },
   webgpu: leaf('webgpu', 'rendering', '⚙️', 'WebGPU',
     "A modern, low-overhead GPU API for the web — direct access to compute and graphics pipelines, successor to WebGL. It's what lets browser-based 3D scenes approach native-app performance.",
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API' }, { label: 'W3C spec', url: 'https://www.w3.org/TR/webgpu/' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API' }, { label: 'W3C spec', url: 'https://www.w3.org/TR/webgpu/' }], 'SHIPPING',
+    "You compile a pipeline object up front (shaders + fixed-function state), then record commands into a GPUCommandEncoder and submit them in one batch — a deliberate shift from WebGL's call-by-call immediate mode. Compute and render pipelines share the same device and buffers.",
+    NO_KNOWN_TRAPS),
   webgl: leaf('webgl', 'rendering', '🖼️', 'WebGL',
     "The original browser 3D API, built on OpenGL ES. It's been in every major browser for over a decade and still powers most production WebXR today, even as WebGPU takes over the leading edge.",
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API' }], 'SHIPPING',
+    "A single implicit global state machine: you bind a buffer, a shader program, and textures to global slots, then draw, reading whatever is currently bound. There's no separate compute pipeline — general compute gets smuggled through fragment shaders. Extensions vary by device.",
+    NO_KNOWN_TRAPS),
   threejs: leaf('threejs', 'rendering', '🌲', 'Three.js',
     'The most widely used 3D library for the web — wraps WebGL/WebGPU behind a friendly scene graph. This project is literally built on it (see the import map in index.html).',
-    [{ label: 'threejs.org', url: 'https://threejs.org/' }], 'SHIPPING'),
+    [{ label: 'threejs.org', url: 'https://threejs.org/' }], 'SHIPPING',
+    'A scene graph: Object3D nodes with local transforms compose into world matrices, walked once per frame. It abstracts the GPU behind Geometry+Material+Mesh, batches state changes, and exposes loaders, animation, and a raycaster for picking — the real GPU calls live inside a swappable renderer.',
+    [
+      "Object3D.lookAt() doesn't point local -Z at the target the way a camera/WebXR controller does — verified backwards more than once",
+      "An InstancedMesh's cached bounding sphere never auto-updates as instances move — a mesh built after an async load can end up invisible or unpickable",
+    ]),
   babylonjs: leaf('babylonjs', 'rendering', '🅱️', 'Babylon.js',
     'A full-featured 3D engine with a heavier built-in toolset than Three.js — physics, a node-material editor, a browser-based playground IDE. Popular for product configurators and browser games.',
-    [{ label: 'babylonjs.com', url: 'https://www.babylonjs.com/' }], 'SHIPPING'),
+    [{ label: 'babylonjs.com', url: 'https://www.babylonjs.com/' }], 'SHIPPING',
+    "Also a scene-graph abstraction over WebGL/WebGPU, but bundles more of the stack: a physics plugin interface, a node-based material editor, a full animation/particle system, and a hosted playground. Its Inspector tool pokes at a running scene's node tree and materials live, in-browser.",
+    NO_KNOWN_TRAPS),
   aframe: leaf('aframe', 'rendering', '🅰️', 'A-Frame',
     'A declarative, HTML-like layer over Three.js for building WebXR scenes with custom tags instead of imperative code. Great for fast prototypes; a smaller, slower-moving ecosystem than Three.js or Babylon.',
-    [{ label: 'aframe.io', url: 'https://aframe.io/' }], 'MATURING'),
+    [{ label: 'aframe.io', url: 'https://aframe.io/' }], 'MATURING',
+    'Custom HTML elements (<a-entity>, <a-scene>) map to an Entity-Component-System over Three.js. Behavior comes from small reusable components referenced as HTML attributes — fast for common patterns, at the cost of dropping to Three.js directly for anything custom.',
+    NO_KNOWN_TRAPS),
   shaders: leaf('shaders', 'rendering', '✨', 'Shaders: GLSL → WGSL',
     'Shaders are the small GPU programs that decide what every pixel looks like. WebGL uses GLSL; WebGPU introduces its own language, WGSL — the ecosystem is mid-migration between the two.',
-    [{ label: 'WGSL spec', url: 'https://www.w3.org/TR/WGSL/' }, { label: 'MDN GLSL', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_shaders_to_apply_color_in_WebGL' }], 'MATURING'),
+    [{ label: 'WGSL spec', url: 'https://www.w3.org/TR/WGSL/' }, { label: 'MDN GLSL', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_shaders_to_apply_color_in_WebGL' }], 'MATURING',
+    'A vertex shader runs once per vertex and outputs a clip-space position; a fragment shader runs once per covered pixel and outputs a color, interpolated between them across a triangle. WGSL swaps GLSL for a stricter syntax and unifies compute and render under one language.',
+    [
+      'In onBeforeCompile, replacing a stock chunk instead of appending after it breaks the shader compile with duplicate declarations — augment, never replace',
+      'Reusing an existing per-instance attribute for a new effect silently double-counts whatever it already encodes',
+    ]),
   gltf: leaf('gltf', 'rendering', '📦', 'glTF / GLB',
     'The Khronos-ratified "JPEG of 3D" — a compact, standard interchange format for models, materials, and animations. Nearly every web 3D engine imports it directly.',
-    [{ label: 'Khronos glTF', url: 'https://www.khronos.org/gltf/' }], 'STANDARD'),
+    [{ label: 'Khronos glTF', url: 'https://www.khronos.org/gltf/' }], 'STANDARD',
+    'A JSON scene description (nodes, meshes, materials, animations) plus binary buffers, packaged as loose files or one .glb. PBR metallic-roughness materials are the default so an asset looks consistent across engines; extensions add mesh/texture compression without forking the base format.',
+    [
+      'AI-generated or scanned meshes are almost always too heavy for a headset — decimate, collapse materials, bake detail into textures first',
+      'Re-test the export→import round trip every pipeline change; a decimator can silently reorient or rescale a mesh',
+    ]),
 
   // ==== Immersion =======================================================
   immersion: {
@@ -57,25 +94,44 @@ export const CORPUS = {
   },
   'webxr-device-api': leaf('webxr-device-api', 'immersion', '🎮', 'WebXR Device API',
     "The core browser API for requesting an immersive session, reading headset/controller poses, and rendering stereo frames. Every mode in this app's mode switcher runs through it.",
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API' }, { label: 'W3C spec', url: 'https://www.w3.org/TR/webxr/' }], 'STANDARD'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API' }, { label: 'W3C spec', url: 'https://www.w3.org/TR/webxr/' }], 'STANDARD',
+    "requestSession() returns a session tied to a reference space (viewer, local, local-floor) defining your coordinate origin. Each frame an XRFrame gives the current pose relative to it; the browser renders stereo into an XRWebGLLayer you hand it once.",
+    [
+      "On sessionend the residual head pose (position + roll) must be reset, or code that only wrote yaw/pitch leaves a jarring tilt on exit",
+      "The session can end via the platform's own menu, not just your exit button — always listen for the session's 'end' event or the app gets stuck",
+    ]),
   'xr-modes': leaf('xr-modes', 'immersion', '🌗', 'VR / AR / Passthrough Modes',
     "One WebXR session can request 'immersive-vr' or 'immersive-ar'; passthrough blends live camera video with rendered content. Support and quality vary a lot by device.",
-    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }], 'MATURING'),
+    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }], 'MATURING',
+    'immersive-vr replaces your whole view; immersive-ar composites rendered content over camera passthrough with real-world tracking underneath. The same session/frame loop drives both — what differs is what the compositor shows behind your content and which optional features make sense to request.',
+    [
+      'A bounded environment built for VR (walls, floor, ceiling, sky) has to be suppressed entirely in AR, not just the sky — passthrough IS the environment, and anything freestanding needs to anchor to the real floor instead',
+    ]),
   'hand-tracking': leaf('hand-tracking', 'immersion', '✋', 'Hand Tracking',
     'Skeletal hand-joint poses delivered straight into WebXR input sources — no controller needed. Well supported on Quest\'s browser; patchier elsewhere.',
-    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-hand-input-1/' }], 'MATURING'),
+    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-hand-input-1/' }], 'MATURING',
+    'When enabled, an XRInputSource exposes a hand with ~25 named joints (wrist, per-finger knuckles and tips), each with its own pose via XRFrame.getJointPose(). No physical controller is involved, so gestures like a pinch have to be computed from joint distances yourself rather than read off a button.',
+    NO_KNOWN_TRAPS),
   'hit-test': leaf('hit-test', 'immersion', '🎯', 'Hit-Test',
     'Casts a ray into the real world and returns where it hits a detected surface — the basis of "tap to place an object on the floor" AR interactions.',
-    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-hit-test-1/' }], 'MATURING'),
+    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-hit-test-1/' }], 'MATURING',
+    "You request a hit-test source anchored to a ray (typically the gaze or a controller); each frame the runtime returns where that ray currently intersects detected real-world geometry, as a pose you can place something at. It's a live query, not a persistent map — recompute it every frame you need it.",
+    NO_KNOWN_TRAPS),
   anchors: leaf('anchors', 'immersion', '📌', 'Anchors',
     'Lets an app pin a virtual object to a real-world point so it stays put as tracking recalculates. Narrower device support than hit-test.',
-    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-anchors-module-1/' }], 'EXPERIMENTAL'),
+    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-anchors-module-1/' }], 'EXPERIMENTAL',
+    "An anchor wraps a pose and asks the runtime to keep tracking it as its map improves, correcting drift you'd otherwise accumulate. Create one from a hit-test result, then read its updated pose via the anchor's own tracked space, not the original coordinates.",
+    NO_KNOWN_TRAPS),
   'depth-sensing': leaf('depth-sensing', 'immersion', '🌊', 'Depth Sensing',
     'Exposes a live per-pixel depth map of the real world, enabling real occlusion — virtual content correctly hiding behind your couch. Still an early, unevenly supported module.',
-    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-depth-sensing-1/' }], 'EXPERIMENTAL'),
+    [{ label: 'W3C module', url: 'https://www.w3.org/TR/webxr-depth-sensing-1/' }], 'EXPERIMENTAL',
+    'The runtime returns a per-frame depth buffer (CPU data or a GPU texture) aligned to the camera view — real-world distance per pixel. A renderer can occlusion-test virtual geometry against it in the fragment shader, so real objects correctly hide content.',
+    NO_KNOWN_TRAPS),
   openxr: leaf('openxr', 'immersion', '🔧', 'OpenXR',
     'The native, cross-platform XR API that browser engines build their WebXR implementation on top of. You never call it directly from the web, but it\'s the plumbing underneath every headset runtime.',
-    [{ label: 'Khronos OpenXR', url: 'https://www.khronos.org/openxr/' }], 'STANDARD'),
+    [{ label: 'Khronos OpenXR', url: 'https://www.khronos.org/openxr/' }], 'STANDARD',
+    "A C API a headset runtime implements and an engine or browser links against — sessions, spaces, input actions, and frame submission mirror what WebXR later standardized for the browser, typically a thin layer over the platform's own OpenXR runtime.",
+    NO_KNOWN_TRAPS),
 
   // ==== Real-time =======================================================
   realtime: {
@@ -86,16 +142,29 @@ export const CORPUS = {
   },
   websockets: leaf('websockets', 'realtime', '🔌', 'WebSockets',
     'A persistent, full-duplex TCP connection between browser and server. The oldest and simplest way to push real-time updates — still the default choice for most multiplayer state sync.',
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API' }], 'SHIPPING',
+    'One HTTP handshake upgrades the connection, after which both sides push framed messages over the same TCP socket anytime — no polling. Ordering and delivery are guaranteed by TCP, which is also its ceiling: one dropped packet stalls everything behind it until retransmitted.',
+    [
+      "A presence socket needs its own liveness discipline — stale-peer pruning plus reconnect-on-drop — the browser gives no signal when the other end vanishes",
+      'A free-tier host can idle-sleep a long-lived server; the first connection after a quiet spell pays a cold-start delay',
+    ]),
   webtransport: leaf('webtransport', 'realtime', '🚚', 'WebTransport',
     'A newer, UDP-based transport (over HTTP/3/QUIC) offering lower-latency, unreliable-ok delivery — a better fit for fast-moving XR state than TCP. Shipping in Chrome/Edge; Safari support is the main gap.',
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebTransport_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebTransport_API' }], 'SHIPPING',
+    "Built on HTTP/3's QUIC, it offers multiple independent streams over one connection plus unreliable datagrams — one lost packet only stalls its own stream, not everything, and state a later update would supersede anyway (like a position) can skip retransmission entirely via datagrams.",
+    NO_KNOWN_TRAPS),
   webrtc: leaf('webrtc', 'realtime', '📹', 'WebRTC',
     'Peer-to-peer audio, video, and data channels directly between browsers. Powers voice chat and low-latency data in most multiplayer XR apps, usually via a relay/SFU rather than true mesh.',
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API' }], 'SHIPPING',
+    'Two peers exchange capabilities (SDP offer/answer) over a signaling channel you supply, then negotiate a path with ICE — host, then STUN-reflexive, then TURN-relayed candidates. Once connected, media/data flow peer-to-peer, unless a TURN relay or SFU is added.',
+    NO_KNOWN_TRAPS),
   livekit: leaf('livekit', 'realtime', '🛰️', 'LiveKit & the SFU Model',
     'An open-source Selective Forwarding Unit built on WebRTC: each client sends one stream to a server, which forwards it to everyone else, instead of every client connecting to every other client. What most production multiplayer voice/video actually runs on.',
-    [{ label: 'livekit.io', url: 'https://livekit.io/' }], 'SHIPPING'),
+    [{ label: 'livekit.io', url: 'https://livekit.io/' }], 'SHIPPING',
+    'Each participant opens one WebRTC connection to the SFU, uploading their own stream once; the SFU re-forwards it to every other participant rather than each client uploading N times for N peers. A short-lived JWT, minted server-side and scoped to one room, authorizes the connection.',
+    [
+      "The API secret that mints room access tokens must live only on a backend — a client that could mint its own token could mint one for any room, so token issuance can never move to the static client",
+    ]),
 
   // ==== Platform primitives =============================================
   platform: {
@@ -106,28 +175,49 @@ export const CORPUS = {
   },
   wasm: leaf('wasm', 'platform', '🧱', 'WebAssembly',
     'A compact, near-native-speed bytecode target the browser can run — lets languages like Rust or C++ (e.g. a physics engine) run inside a web page at real speed.',
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/WebAssembly' }, { label: 'webassembly.org', url: 'https://webassembly.org/' }], 'STANDARD'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/WebAssembly' }, { label: 'webassembly.org', url: 'https://webassembly.org/' }], 'STANDARD',
+    "A compact binary format that runs sandboxed at near-native speed in linear memory, compiled ahead of time from languages like Rust or C++. It runs alongside JS, calling back and forth across a defined boundary — it doesn't replace the DOM/Web APIs, which JS still has to broker on its behalf.",
+    NO_KNOWN_TRAPS),
   workers: leaf('workers', 'platform', '👷', 'Web Workers & OffscreenCanvas',
     "Workers run JS on a background thread so physics or networking doesn't stall the render loop; OffscreenCanvas lets that worker even draw pixels directly, off the main thread.",
-    [{ label: 'MDN Workers', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API' }, { label: 'MDN OffscreenCanvas', url: 'https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas' }], 'SHIPPING'),
+    [{ label: 'MDN Workers', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API' }, { label: 'MDN OffscreenCanvas', url: 'https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas' }], 'SHIPPING',
+    'A Worker is a separate JS thread with no DOM access, talking to the main thread only via structured-clone messages (or a shared buffer for zero-copy transfer). OffscreenCanvas lets that worker own a canvas\'s rendering context directly, so even its draw calls happen off the main thread.',
+    [
+      'Moving heavy work into a Worker only changes when it runs, not whether the code handling its reply blocks the main thread — anything proportional to data size in the onmessage callback (validation, a raycast, recentring) is still one uninterruptible task',
+    ]),
   'webgpu-compute': leaf('webgpu-compute', 'platform', '🧮', 'WebGPU Compute',
     'The same WebGPU API also exposes general-purpose compute shaders — not just triangles. Useful for particle systems, cloth, or ML inference running entirely on the GPU in-browser.',
-    [{ label: 'W3C spec', url: 'https://www.w3.org/TR/webgpu/' }], 'SHIPPING'),
+    [{ label: 'W3C spec', url: 'https://www.w3.org/TR/webgpu/' }], 'SHIPPING',
+    'A compute pipeline runs a WGSL kernel across a 3D grid of invocations, reading/writing storage buffers and textures with no rasterization step — the same device and buffers a render pipeline uses, so results can feed a later draw call with no CPU round-trip.',
+    NO_KNOWN_TRAPS),
   pwa: leaf('pwa', 'platform', '📲', 'PWA / Service Workers / Storage',
     'Service workers cache assets and run offline; storage APIs (IndexedDB etc.) persist state locally. Together they let a spatial-web app install like a native one and survive a dropped connection.',
-    [{ label: 'MDN PWA', url: 'https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps' }, { label: 'MDN Service Worker', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API' }], 'SHIPPING'),
+    [{ label: 'MDN PWA', url: 'https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps' }, { label: 'MDN Service Worker', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API' }], 'SHIPPING',
+    'A service worker registers as a programmable network proxy in front of your origin, intercepting fetches and choosing cache, network, or a mix — that\'s what makes offline and instant repeat-loads possible. A web app manifest is what lets the OS treat it as installable rather than just a bookmark.',
+    NO_KNOWN_TRAPS),
   'web-audio': leaf('web-audio', 'platform', '🔊', 'Web Audio API',
     'A full audio-routing graph in the browser — spatialized/positional sound, filters, synthesis. Essential for a scene to feel like a place rather than a silent diorama.',
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API' }], 'SHIPPING',
+    "You build a graph of nodes (sources, gains, filters, panners) into a destination, rendered on the browser's own audio thread independent of frame rate. PannerNode/AudioListener give real 3D positional audio — attenuation and panning computed from source and listener positions.",
+    ['Browsers block audio (and mic access) until a real user gesture — starting playback on load silently does nothing; gate it behind a tap or click']),
   gamepad: leaf('gamepad', 'platform', '🕹️', 'Gamepad API',
     "Reads raw controller/gamepad input — buttons, axes, sometimes haptics. WebXR's own input sources cover XR controllers; this is the fallback for plain USB/Bluetooth pads.",
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API' }], 'SHIPPING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API' }], 'SHIPPING',
+    "navigator.getGamepads() is polled, not event-driven — you read the current button/axis state yourself each frame. Axes report continuous -1..1 values and buttons carry both a boolean pressed state and an analog value, so a trigger's partial pull is readable, not just on/off.",
+    [
+      "A thumbstick rarely reports a true 1.0 at full push — Quest caps around 0.85–0.95 from radial scaling — a 0.95+ sprint threshold can silently never fire",
+      'Different runtimes map the same stick to different axes indices — read whichever pair is actually deflected, don\'t hardcode one',
+    ]),
   webcodecs: leaf('webcodecs', 'platform', '🎞️', 'WebCodecs',
     "Low-level access to the browser's built-in video/audio encoders and decoders, bypassing the usual media-element overhead. Useful for streaming a live camera feed into a scene efficiently.",
-    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API' }], 'MATURING'),
+    [{ label: 'MDN', url: 'https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API' }], 'MATURING',
+    "Exposes the browser's hardware/software encoder and decoder directly as VideoEncoder/VideoDecoder objects operating on raw frames, bypassing <video>/MediaRecorder's higher-level pipeline. You get per-frame control and can route decoded frames straight into a WebGL/WebGPU texture.",
+    NO_KNOWN_TRAPS),
   'es-modules': leaf('es-modules', 'platform', '🧵', 'ES Modules & Import Maps',
     'Native browser import/export, with import maps letting a bare specifier like "three" resolve to a CDN URL — no bundler required. This whole project ships this way; check the import map in index.html.',
-    [{ label: 'MDN Modules', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules' }, { label: 'MDN Import Maps', url: 'https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap' }], 'SHIPPING'),
+    [{ label: 'MDN Modules', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules' }, { label: 'MDN Import Maps', url: 'https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap' }], 'SHIPPING',
+    'import/export are statically analyzable, so the browser builds the full dependency graph before running anything, and modules run in strict mode with their own scope by default. An import map lets a bare specifier resolve to any URL you configure — how this app pulls dependencies with no bundler.',
+    NO_KNOWN_TRAPS),
 
   // ==== Physics & simulation =============================================
   physics: {
@@ -138,13 +228,19 @@ export const CORPUS = {
   },
   rapier: leaf('rapier', 'physics', '🦀', 'Rapier',
     'A Rust physics engine compiled to WebAssembly — fast, deterministic, and the engine of choice for a lot of newer WebXR projects (including the sats-arena line this repo is a sibling of).',
-    [{ label: 'rapier.rs', url: 'https://rapier.rs/' }], 'SHIPPING'),
+    [{ label: 'rapier.rs', url: 'https://rapier.rs/' }], 'SHIPPING',
+    'An impulse-based, iterative constraint solver; the WASM build exposes the same rigid-body/collider/joint API as native Rapier. You step a fixed-timestep world each frame, then read back transforms for what you render — physics and render scene are kept in sync yourself.',
+    NO_KNOWN_TRAPS),
   'physics-workers': leaf('physics-workers', 'physics', '⚙️', 'Physics-in-a-Worker Pattern',
     'Running the physics step inside a Web Worker keeps a heavy simulation from ever blocking the render thread — the render loop just reads back transforms each frame instead of computing them itself.',
-    [{ label: 'MDN Workers', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API' }], 'MATURING'),
+    [{ label: 'MDN Workers', url: 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API' }], 'MATURING',
+    "The physics step runs inside a Worker on its own thread, posting back transforms for every active body via a shared/transferable buffer to skip a copy. The render loop reads whatever's latest rather than blocking, decoupling physics rate from frame rate.",
+    ['Same trap as Workers generally: running physics off-thread doesn\'t help if reading its results back into the scene each frame does O(body-count) work synchronously on the main thread']),
   'other-physics': leaf('other-physics', 'physics', '🧊', 'Other WASM Physics: cannon-es, Ammo.js',
     'cannon-es is a lighter, TypeScript-maintained engine descended from cannon.js; Ammo.js is an Emscripten port of Bullet Physics. Both still see use, though Rapier has become the more common default for new projects.',
-    [{ label: 'cannon-es', url: 'https://pmndrs.github.io/cannon-es/' }, { label: 'Ammo.js', url: 'https://github.com/kripken/ammo.js/' }], 'MATURING'),
+    [{ label: 'cannon-es', url: 'https://pmndrs.github.io/cannon-es/' }, { label: 'Ammo.js', url: 'https://github.com/kripken/ammo.js/' }], 'MATURING',
+    "cannon-es is a maintained TypeScript fork of cannon.js, an impulse-solver similar in spirit to Rapier but running as plain JS, not WASM. Ammo.js is a direct Emscripten compile of the C++ Bullet engine, exposing Bullet's own API via a WASM/asm.js binding.",
+    NO_KNOWN_TRAPS),
 
   // ==== Identity & social =================================================
   identity: {
@@ -155,13 +251,19 @@ export const CORPUS = {
   },
   nostr: leaf('nostr', 'identity', '🦩', 'Nostr',
     'A minimal, relay-based protocol: your identity is just a keypair, your posts are signed events broadcast to relays you choose. No company owns your account or your follow graph.',
-    [{ label: 'nostr.com', url: 'https://nostr.com/' }], 'MATURING'),
+    [{ label: 'nostr.com', url: 'https://nostr.com/' }], 'MATURING',
+    'Every action is a signed JSON event (kind, content, pubkey, signature) published to whichever relays you choose; relays are simple, mostly dumb stores with no requirement to talk to each other. Clients merge results from multiple relays themselves, which is what makes the network hard to censor.',
+    NO_KNOWN_TRAPS),
   atproto: leaf('atproto', 'identity', '🦋', 'AT Protocol / Bluesky',
     'The protocol behind Bluesky — portable identity (DIDs), your data in a personal repository, and algorithmic choice via pluggable feeds. More centralized infra today than Nostr, with an explicit roadmap toward full federation.',
-    [{ label: 'atproto.com', url: 'https://atproto.com/' }], 'MATURING'),
+    [{ label: 'atproto.com', url: 'https://atproto.com/' }], 'MATURING',
+    'Your identity is a DID resolving to a document pointing at your current PDS (personal data server), where posts/follows live as records you can export or move between hosts. The AppView building your feed is separate, and Bluesky ships pluggable feed algorithms.',
+    NO_KNOWN_TRAPS),
   activitypub: leaf('activitypub', 'identity', '🐘', 'ActivityPub / Fediverse',
     'A W3C Recommendation for federated social networking — the protocol behind Mastodon and the wider fediverse. Different servers interoperate the way email servers do.',
-    [{ label: 'W3C Recommendation', url: 'https://www.w3.org/TR/activitypub/' }], 'STANDARD'),
+    [{ label: 'W3C Recommendation', url: 'https://www.w3.org/TR/activitypub/' }], 'STANDARD',
+    "Servers exchange JSON-LD activities (Create, Follow, Like…) over HTTP via each actor's inbox/outbox, discovered through WebFinger. Follow someone elsewhere and a Follow lands in their inbox; once accepted, their posts arrive in yours the same way.",
+    NO_KNOWN_TRAPS),
 
   // ==== Value & open money =================================================
   value: {
@@ -172,19 +274,29 @@ export const CORPUS = {
   },
   bitcoin: leaf('bitcoin', 'value', '₿', 'Bitcoin',
     'A decentralized digital money with a fixed 21M supply, secured by proof-of-work and verified by a global network of nodes rather than a central issuer. The base settlement layer everything else in this cluster builds on.',
-    [{ label: 'bitcoin.org', url: 'https://bitcoin.org/en/how-it-works' }], 'SHIPPING'),
+    [{ label: 'bitcoin.org', url: 'https://bitcoin.org/en/how-it-works' }], 'SHIPPING',
+    'Transactions spend previous outputs and create new ones (UTXOs), broadcast to nodes that independently validate every rule before relaying. Miners bundle valid transactions into a block, racing to find a hash below a target; the longest valid chain wins consensus.',
+    NO_KNOWN_TRAPS),
   lightning: leaf('lightning', 'value', '🌩️', 'Lightning Network',
     'A layer-2 network of payment channels that moves Bitcoin instantly and near-free off-chain, settling to the base chain only when a channel opens or closes. Live since 2018; wallet UX and liquidity management are still actively evolving.',
-    [{ label: 'lightning.network', url: 'https://lightning.network/' }], 'MATURING'),
+    [{ label: 'lightning.network', url: 'https://lightning.network/' }], 'MATURING',
+    'Two parties lock funds into a 2-of-2 multisig on-chain, then exchange signed balance updates off-chain, broadcast only if one side cheats or the channel closes. Payments across a path of channels chain these hop-by-hop with hashed timelocks so no intermediary can steal funds.',
+    ["A hosted wallet's invoice/API key is a bearer secret for the whole balance — it has to live only on a backend the client never sees, never bundled into the frontend"]),
   cashu: leaf('cashu', 'value', '🥜', 'Cashu / Ecash',
     'Chaumian ecash backed by Lightning: a mint issues blinded bearer tokens that are private and near-instant to swap. Smaller, faster-moving ecosystem than Lightning itself — this is what the (off-by-default) per-search sats demo in this app would settle through.',
-    [{ label: 'cashu.space', url: 'https://cashu.space/' }], 'EXPERIMENTAL'),
+    [{ label: 'cashu.space', url: 'https://cashu.space/' }], 'EXPERIMENTAL',
+    "A mint holds real sats and issues tokens via blind signatures: it signs a token without seeing its serial number, so it can verify authenticity later without linking it back to who requested it. Spending redeems an old token for a fresh one at the mint.",
+    NO_KNOWN_TRAPS),
   'rgb-protocol': leaf('rgb-protocol', 'value', '📜', 'RGB (Client-Side Contracts)',
     'Client-side-validated smart contracts anchored to Bitcoin/Lightning — state lives off-chain in consignments the involved parties validate themselves, while Bitcoin only anchors a commitment. Enables tokens and one-of-one digital assets without bloating the base chain.',
-    [{ label: 'rgbfaq.com', url: 'https://www.rgbfaq.com/' }], 'EXPERIMENTAL'),
+    [{ label: 'rgbfaq.com', url: 'https://www.rgbfaq.com/' }], 'EXPERIMENTAL',
+    "Contract state and history live off-chain in a 'consignment' the parties pass to each other and validate against the contract's own rules — Bitcoin only stores a commitment to that state. That's why it scales: the chain's work never grows with contract complexity.",
+    NO_KNOWN_TRAPS),
   'lnurl-nwc': leaf('lnurl-nwc', 'value', '🔗', 'LNURL & Nostr Wallet Connect',
     'LNURL is a family of small specs that make Lightning interactions (tipping, login, withdrawing) work with a simple scannable link; Nostr Wallet Connect lets an app request permission to spend from your wallet remotely, over Nostr.',
-    [{ label: 'LNURL specs', url: 'https://github.com/lnurl/luds' }, { label: 'nwc.dev', url: 'https://nwc.dev/' }], 'MATURING'),
+    [{ label: 'LNURL specs', url: 'https://github.com/lnurl/luds' }, { label: 'nwc.dev', url: 'https://nwc.dev/' }], 'MATURING',
+    'LNURL encodes an HTTPS callback URL as a scannable link; a wallet fetches metadata from it and completes a flow (pay, withdraw, login). Nostr Wallet Connect instead sends signed, encrypted JSON-RPC requests over Nostr relays — no direct HTTP endpoint on your wallet needed.',
+    NO_KNOWN_TRAPS),
 
   // ==== The Why ============================================================
   why: {
@@ -195,13 +307,19 @@ export const CORPUS = {
   },
   'dimensional-web': leaf('dimensional-web', 'why', '📐', 'The Dimensional Web',
     'Text (1D) → hypertext pages (2D) → 3D scenes → shared, persistent "4D" spaces over time. Each jump didn\'t replace the last one — it added a dimension the web could route through a link.',
-    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }]),
+    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }], undefined,
+    "Each step kept the previous one reachable through the same mechanism — a link. A 2D page can still show plain text; a 3D WebXR scene loads from an ordinary URL a 2D browser can load flat too. It's additive capability behind one addressing scheme, not a parallel web.",
+    NO_KNOWN_TRAPS),
   'one-link-any-reality': leaf('one-link-any-reality', 'why', '🔗', 'One Link, Any Reality',
     'The actual promise of WebXR: the SAME url runs on a phone, a desktop browser, and a headset, because immersive mode is a session request an existing page can make — not a separate app you have to download.',
-    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }]),
+    [{ label: 'immersiveweb.dev', url: 'https://immersiveweb.dev/' }], undefined,
+    "A WebXR session is just a mode a page can request from JavaScript, gated on feature-detection and a user gesture — no separate binary, app store, or SDK involved. The same HTML/JS rendering a flat canvas on desktop can, on a capable device, request an immersive session instead.",
+    NO_KNOWN_TRAPS),
   'open-standards': leaf('open-standards', 'why', '🏛️', 'Open Standards vs Walled Gardens',
     "Every cluster in this constellation — WebGPU, WebXR, ActivityPub, Bitcoin — is either a published open standard or an openly specified protocol nobody has to ask permission to build on. That's a deliberate bet against platform lock-in.",
-    [{ label: 'W3C mission', url: 'https://www.w3.org/mission/' }]),
+    [{ label: 'W3C mission', url: 'https://www.w3.org/mission/' }], undefined,
+    "A spec published by a body like the W3C or Khronos, with an open process for changes, means any browser or engine can implement it without a license or a company's permission — independent implementations keep any one vendor from quietly changing the rules.",
+    NO_KNOWN_TRAPS),
 };
 
 // Community-authored RGB nodes: id -> authorship seed. Only reachable when
@@ -301,9 +419,10 @@ export function expandChildren(ids = []) {
 }
 
 // tiny helper to keep the corpus readable
-function leaf(id, category, emoji, title, body, links, maturity) {
+function leaf(id, category, emoji, title, body, links, maturity, t2, t3) {
   const node = { id, kind: 'concept', category, relevance: 0.6, emoji, title, body, children: [] };
   if (links) node.links = links;
   if (maturity) node.maturity = maturity;
+  if (t2 || t3) node.tiers = { t2: t2 || body, t3: t3 || NO_KNOWN_TRAPS };
   return node;
 }

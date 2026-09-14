@@ -5,7 +5,7 @@ const { CONFIG } = await import('./src/config.js');
 const { makeAgentProvider } = await import('./src/providers/AgentProvider.js');
 const { makePaymentProvider } = await import('./src/providers/PaymentProvider.js');
 const { makeAssetProvider } = await import('./src/providers/AssetProvider.js');
-const { expandChildren, CLUSTER_IDS, CORPUS } = await import('./src/content/techCorpus.js');
+const { expandChildren, CLUSTER_IDS, CORPUS, TIER_MAX_CHARS } = await import('./src/content/techCorpus.js');
 
 const agent = makeAgentProvider();
 const pay = makePaymentProvider();
@@ -90,6 +90,34 @@ A(dec[0].rgb.model === 'ownership' && dec[0].rgb.priceSats > 0, `ownership model
 // 10. mint a structure as RGB UDA (mechanism unchanged, still callable directly)
 const minted = await assets.mintStructure({ title: 'My Spatial Web Map', childIds: ['webgpu', 'nostr', 'bitcoin'] }, 'npub1me');
 A(minted.contractId.startsWith('rgb:') && minted.schema === 'collection', `minted ${minted.schema} ${minted.contractId}`);
+
+// 11. depth layers: every leaf has t1/t2/t3, no tier exceeds the character
+// budget the panel can actually render (see panel.js body text area), and
+// t3 is either real sourced traps or the honest "no known traps" fallback —
+// never invented filler.
+const tierMissing = leaves.filter((n) => !n.tiers || !n.tiers.t2 || !Array.isArray(n.tiers.t3) || n.tiers.t3.length === 0);
+A(tierMissing.length === 0, `every leaf node has t1 (body) + t2 + t3 (${tierMissing.length} missing: ${tierMissing.map((n) => n.id).join(', ')})`);
+
+const overBudget = [];
+for (const n of leaves) {
+  if (n.body.length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t1`);
+  if (n.tiers.t2.length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t2`);
+  if (n.tiers.t3.join(' ').length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t3`);
+}
+A(overBudget.length === 0, `no tier exceeds the ${TIER_MAX_CHARS}-char budget (${overBudget.length} over: ${overBudget.join(', ')})`);
+
+const badBulletCount = leaves.filter((n) => n.tiers.t3.length < 1 || n.tiers.t3.length > 5);
+A(badBulletCount.length === 0, 't3 has 1-5 bullets on every leaf (2-5 real traps, or exactly one honest "no known traps" line)');
+
+const withTraps = leaves.filter((n) => n.tiers.t3[0] !== 'no known traps documented yet').length;
+const withoutTraps = leaves.length - withTraps;
+A(withTraps > 0 && withoutTraps > 0, `${withTraps} nodes carry real sourced traps, ${withoutTraps} honestly say none are documented yet`);
+
+// Note: panel.js's tier-cycling (makePanel().userData.cycleTier()) imports
+// three.js, which this repo deliberately resolves only via the browser's
+// import map (no bundler/node_modules) — same reason nothing else in this
+// suite touches src/renderer/*.js. That behavior is verified live in Chrome
+// instead (see the task's verification pass), not here.
 
 console.log(fail ? `\nFAILED ${fail} assertions` : '\nALL PASS');
 process.exit(fail ? 1 : 0);
