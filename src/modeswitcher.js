@@ -22,6 +22,19 @@ export class ModeSwitcher {
     };
     this._wire();
     this._detect();
+    this._wireSessionGranted();
+  }
+
+  // Quest Browser (and similar) fire 'sessiongranted' on navigator.xr when
+  // arriving from another WebXR site that kept the immersive context alive —
+  // permission is already granted, no click needed, so this is the one place
+  // it's correct to call _enter() without a user gesture. Feature-detected;
+  // browsers that never fire this event see zero behavior change.
+  _wireSessionGranted() {
+    navigator.xr?.addEventListener('sessiongranted', () => {
+      if (this.session) return; // already in a session — nothing to continue into
+      this._enter('immersive-vr');
+    });
   }
 
   async _detect() {
