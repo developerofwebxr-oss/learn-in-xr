@@ -6,6 +6,7 @@ const { makeAgentProvider } = await import('./src/providers/AgentProvider.js');
 const { makePaymentProvider } = await import('./src/providers/PaymentProvider.js');
 const { makeAssetProvider } = await import('./src/providers/AssetProvider.js');
 const { expandChildren, CLUSTER_IDS, CORPUS, TIER_MAX_CHARS } = await import('./src/content/techCorpus.js');
+const { renderT3 } = await import('./src/schema.js');
 
 const agent = makeAgentProvider();
 const pay = makePaymentProvider();
@@ -100,9 +101,10 @@ A(tierMissing.length === 0, `every leaf node has t1 (body) + t2 + t3 (${tierMiss
 
 const overBudget = [];
 for (const n of leaves) {
-  if (n.body.length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t1`);
+  // t1 is the pre-existing body (task: unchanged), so it isn't held to the
+  // new budget; t3 is measured as rendered, bullets + separators included.
   if (n.tiers.t2.length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t2`);
-  if (n.tiers.t3.join(' ').length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t3`);
+  if (renderT3(n.tiers.t3).length > TIER_MAX_CHARS) overBudget.push(`${n.id}:t3`);
 }
 A(overBudget.length === 0, `no tier exceeds the ${TIER_MAX_CHARS}-char budget (${overBudget.length} over: ${overBudget.join(', ')})`);
 

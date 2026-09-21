@@ -72,3 +72,7 @@ export const SECTORS = {
 
 // Nothing to instantiate — this module is types + the sector table.
 export const SCHEMA_VERSION = 1;
+
+/** The exact string a panel draws for a t3 tier ("• a   • b"), so the corpus
+ *  character budget is checked against what is rendered, not the raw bullets. */
+export const renderT3 = (bullets) => bullets.map((b) => `• ${b}`).join('   ');

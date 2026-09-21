@@ -5,7 +5,7 @@
 // The panel is a Group so we can attach a subtle frame + hover glow.
 
 import * as THREE from 'three';
-import { SECTORS } from '../schema.js';
+import { SECTORS, renderT3 } from '../schema.js';
 import { CONFIG } from '../config.js';
 
 const PANEL_W = 1.0;      // metres
@@ -72,7 +72,7 @@ const TIER_LABELS = ['Meaning', 'How it works', 'Gotchas'];
 /** Body text for the given tier — t1 falls back to `body` for nodes with no `tiers`. */
 function tierBody(node, tier) {
   if (tier === 1 && node.tiers) return node.tiers.t2;
-  if (tier === 2 && node.tiers) return node.tiers.t3.map((b) => `• ${b}`).join('   ');
+  if (tier === 2 && node.tiers) return renderT3(node.tiers.t3);
   return node.body || '';
 }
 
@@ -192,8 +192,9 @@ function wrapText(ctx, text, x, y, maxW, lineH, maxLines) {
     if (ctx.measureText(test).width > maxW && line) {
       ctx.fillText(line, x, y); line = w; y += lineH; lines++;
       if (lines >= maxLines - 1) {
-        // last line: ellipsize remainder
+        // last line: draw the remainder as-is if it fits, else ellipsize it
         let rest = words.slice(words.indexOf(w)).join(' ');
+        if (ctx.measureText(rest).width <= maxW) { ctx.fillText(rest, x, y); return; }
         while (ctx.measureText(rest + '…').width > maxW && rest.length) rest = rest.slice(0, -1);
         ctx.fillText(rest + '…', x, y); return;
       }
