@@ -4,7 +4,7 @@
 // The laser keyboard (one InstancedMesh of boxes as the raycast target,
 // pooled sprite letter labels painted once, chip/panel hit-testing via UV
 // rects) is PORTED from the sibling WordMesh repo
-// (~/Documents/wordmesh/index.html, "search panel + keyboard" section) —
+// (/Users/dev/devxr/wordmesh/index.html, "search panel + keyboard" section) —
 // not rebuilt. Adapted here: WordMesh's live match-list-as-you-type became
 // a fixed grid of the 12 preset intent chips (this app's queries are a
 // keyword/intent match, not a live token filter) plus an explicit SUBMIT
