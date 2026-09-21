@@ -291,7 +291,7 @@ export const CORPUS = {
     "A mint holds real sats and issues ecash tokens using blind signatures: it signs without seeing the token's secret, so it can later verify a token without linking it to whoever requested it. Spending swaps old tokens for new ones.",
     NO_KNOWN_TRAPS),
   'rgb-protocol': leaf('rgb-protocol', 'value', '📜', 'RGB (Client-Side Contracts)',
-    'Client-side-validated smart contracts anchored to Bitcoin/Lightning — state lives off-chain in consignments the involved parties validate themselves, while Bitcoin only anchors a commitment. Enables tokens and one-of-one digital assets without bloating the base chain.',
+    'Client-side-validated smart contracts anchored to Bitcoin/Lightning — state lives off-chain with the parties who validate it; Bitcoin only anchors a commitment. Enables tokens and one-of-one digital assets without bloating the base chain.',
     [{ label: 'rgbfaq.com', url: 'https://www.rgbfaq.com/' }], 'EXPERIMENTAL',
     "Contract state and history live off-chain in a consignment the parties pass to each other and validate against the contract's rules; Bitcoin only holds a commitment. So on-chain cost doesn't grow with contract complexity.",
     NO_KNOWN_TRAPS),
